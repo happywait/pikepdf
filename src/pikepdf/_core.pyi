@@ -1874,6 +1874,9 @@ class Pdf:
         Suggested before saving, if content streams or /Resources dictionaries
         are edited.
         """
+    def concat(self, pdf2: Pdf) -> None:
+        """Append another Pdf to the current one
+        """
     def save(
         self,
         filename_or_stream: Path | str | BinaryIO | None = None,
