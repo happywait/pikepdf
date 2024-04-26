@@ -18,6 +18,7 @@
 #include <qpdf/QPDFPageDocumentHelper.hh>
 #include <qpdf/Pl_Discard.hh>
 #include <qpdf/QPDFAcroFormDocumentHelper.hh>
+#include <qpdf/QPDFPageLabelDocumentHelper.hh>
 #include <qpdf/QPDFEmbeddedFileDocumentHelper.hh>
 #include <qpdf/QPDFLogger.hh>
 
@@ -421,6 +422,29 @@ void save_pdf(QPDF &q,
     w.write();
 }
 
+static QPDFObjectHandle
+added_page(QPDF& pdf, QPDFObjectHandle page)
+{
+    QPDFObjectHandle result = page;
+    if (&page.getQPDF() != &pdf) {
+        // Calling copyForeignObject on an object we already copied will give us the already
+        // existing copy.
+        result = pdf.copyForeignObject(page);
+    }
+    return result;
+}
+
+static QPDFAcroFormDocumentHelper*
+get_afdh_for_qpdf(
+    std::map<unsigned long long, std::shared_ptr<QPDFAcroFormDocumentHelper>>& afdh_map, QPDF& q)
+{
+    auto uid = q.getUniqueId();
+    if (!afdh_map.count(uid)) {
+        afdh_map[uid] = std::make_shared<QPDFAcroFormDocumentHelper>(q);
+    }
+    return afdh_map[uid].get();
+}
+
 void init_qpdf(py::module_ &m)
 {
     QPDF::registerStreamFilter("/JBIG2Decode", &JBIG2StreamFilter::factory);
@@ -522,6 +546,34 @@ void init_qpdf(py::module_ &m)
             [](QPDF &q) {
                 QPDFPageDocumentHelper helper(q);
                 helper.removeUnreferencedResources();
+            })
+        .def("concat",
+            [](QPDF &q, QPDF &q2) {
+                std::map<unsigned long long, std::shared_ptr<QPDFAcroFormDocumentHelper>> afdh_map;
+                auto this_afdh = get_afdh_for_qpdf(afdh_map, q);
+                std::set<QPDFObjGen> referenced_fields;
+
+                for (auto const& page: q2.getAllPages()) {
+                    QPDFPageLabelDocumentHelper pldh(q2);
+                    auto other_afdh = get_afdh_for_qpdf(afdh_map, q2);
+                    QPDFObjGen to_copy_og = page.getObjGen();
+                    q.addPage(page, false);
+                    auto new_page = added_page(q, page);
+                    if (other_afdh->hasAcroForm()) {
+                        try {
+                            this_afdh->fixCopiedAnnotations(
+                                new_page, page, *other_afdh, &referenced_fields);
+                        } catch (std::exception& e) {
+                            q.warn(
+                                qpdf_e_damaged_pdf,
+                                "",
+                                0,
+                                ("Exception caught while fixing copied annotations. This may be a qpdf "
+                                 "bug. " +
+                                 std::string("Exception: ") + e.what()));
+                        }
+                    }
+                }
             })
         .def("_save",
             save_pdf,
