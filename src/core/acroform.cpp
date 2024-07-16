@@ -31,11 +31,7 @@ void init_acroform(py::module_ &m)
                 }
                 QPDFFormFieldObjectHelper ffh = afdh.getFieldForAnnotation(annot);
                 auto ffh_oh = ffh.getObjectHandle();
-                if (!ffh_oh.isDictionary()) {
-                    // ffh_oh n'est pas un dictionnaire, retourner ou lever une erreur
-                    throw std::runtime_error("ObjectHandle is not a dictionary.");
-                }
-                if (ffh_oh.hasKey("/Parent")) {
+                if (ffh_oh.isDictionary() && ffh_oh.hasKey("/Parent")) {
                     QPDFObjectHandle parent = ffh_oh.getKey("/Parent");
                     if (!parent.isDictionary()) {
                         // parent n'est pas un dictionnaire, retourner ou lever une erreur
