@@ -30,10 +30,6 @@ void init_acroform(py::module_ &m)
                     throw std::runtime_error("Annotation is not a dictionary.");
                 }
                 QPDFFormFieldObjectHelper ffh = afdh.getFieldForAnnotation(annot);
-                if (!ffh.isValid()) {
-                    // ffh n'est pas valide, retourner ou lever une erreur
-                    throw std::runtime_error("FormFieldObjectHelper is not valid.");
-                }
                 auto ffh_oh = ffh.getObjectHandle();
                 if (!ffh_oh.isDictionary()) {
                     // ffh_oh n'est pas un dictionnaire, retourner ou lever une erreur
