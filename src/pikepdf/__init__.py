@@ -19,7 +19,6 @@ from pikepdf._core import (
     AccessMode,
     AcroForm,
     AcroFormField,
-    AcroFormDocument,
     Annotation,
     AnnotationFlag,
     AttachedFileSpec,
