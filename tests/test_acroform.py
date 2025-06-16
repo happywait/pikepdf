@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from pikepdf import Annotation, Name, Pdf
+from pikepdf import AcroFormDocument, Annotation, Name, Pdf
 
 
 @pytest.fixture
@@ -195,3 +195,14 @@ def test_copy_form(form, dd0293):
     new_count = len(dd0293.acroform.fields)
     assert len(copied_fields) == 4  # Count is top-level fields
     assert new_count == orig_count + 5  # Count is terminal fields
+
+def test_set_form_field_name(form):
+    afd = AcroFormDocument(form)
+    field = form.Root.AcroForm.Fields[0]
+    assert field.T == 'Text1'
+    afd.set_form_field_name(field, 'new_field_name')
+    assert field.T == 'new_field_name'
+
+def test_get_form_fields(form):
+    afd = AcroFormDocument(form)
+    assert len(afd.get_form_fields()) == 4
